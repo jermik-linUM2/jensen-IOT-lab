@@ -2,6 +2,7 @@ import os
 from decimal import Decimal
 import psycopg2
 import psycopg2.extras
+from datetime import datetime
 
 
 def get_connection():
@@ -52,11 +53,17 @@ def get_measurements():
 
 
 def device_exists(device_id):
-    # TODO M1:
-    # Kontrollera om device_id finns i tabellen devices.
-    # Returnera True eller False.
-    return False
 
+    query = "SELECT 1 FROM devices WHERE device_id = %s LIMIT 1;"
+    
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(query, (device_id,))
+            row = cur.fetchone()
+
+        return row is not None
+
+    return False
 
 def get_latest_measurement(device_id):
     # TODO M1:
@@ -71,6 +78,28 @@ def get_measurements_for_device(device_id):
 
 
 def insert_measurement(data):
-    # TODO M1:
-    # Spara ett validerat mätvärde i PostgreSQL.
+
+    query = """
+    INSERT INTO measurements (device_id, temperature, humidity, battery, created_at)
+    VALUES (%s, %s, %s, %s, %s)
+    RETURNING *;
+    """
+    created_at = data.get("created_at", datetime.utcnow())
+
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(query, (
+                data["deviceId"],
+                data["temperature"],
+                data["humidity"],
+                data["battery"],
+                created_at
+            ))
+
+            row = cur.fetchone()
+
+            conn.commit()
+
+            return _json_ready(row)
+
     return None
