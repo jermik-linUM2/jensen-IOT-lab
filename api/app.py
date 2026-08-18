@@ -54,6 +54,13 @@ def latest(device_id):
     # 1. Försök läsa från Redis.
     # 2. Vid cache miss: läs från PostgreSQL.
     # 3. Spara databasresultatet i Redis.
+    if device_exists(device_id):
+        data = get_latest_measurement(device_id)
+        return jsonify(data), 200
+    
+    else:
+        return jsonify({"error": f"device '{device_id}' does not exist"}), 404
+
     return jsonify({
         "message": "TODO: implementera latest measurement",
         "deviceId": device_id
@@ -65,6 +72,13 @@ def device_history(device_id):
     # TODO M1:
     # Hämta sensorhistorik från PostgreSQL.
     # Känd sensor utan mätningar: 200 och []. Okänd sensor: 404.
+    if device_exists(device_id):
+        data = get_measurements_for_device(device_id)
+        return jsonify(data), 200
+
+    else:
+        return jsonify({"error": f"device '{device_id}' does not exist"}), 404
+
     return jsonify({
         "message": "TODO: implementera device history",
         "deviceId": device_id

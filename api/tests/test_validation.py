@@ -26,3 +26,29 @@ def test_invalid_temperature_type():
         "temperature": "ERROR",
     }
     assert "temperature must be a number" in validate_measurement(data)
+
+def test_missing_device_id():
+    data = {
+        "temperature": 21.5,
+        "humidity": 45.0,
+        "battery": 90,
+    }
+    assert "deviceId is required" in validate_measurement(data)
+
+def test_invalid_humidity_datatype():
+    data = {
+        "deviceId": "sensor-001",
+        "temperature": 21.5,
+        "humidity": "ERROR",
+        "battery": 90,
+    }
+    assert "humidity must be a number" in validate_measurement(data)
+
+def test_invalid_battery_datatype():
+    data = {
+        "deviceId": "sensor-001",
+        "temperature": 21.5,
+        "humidity": 45.0,
+        "battery": "LOW",
+    }
+    assert "battery must be an integer" in validate_measurement(data)
