@@ -66,8 +66,8 @@ def device_exists(device_id):
     return False
 
 def get_latest_measurement(device_id):
-    # TODO M1:
-    # Implementera senaste mätvärdet för en sensor.
+
+
     query = """
     SELECT id, device_id, temperature, humidity, battery, created_at
     FROM measurements
@@ -86,8 +86,8 @@ def get_latest_measurement(device_id):
 
 
 def get_measurements_for_device(device_id):
-    # TODO M1:
-    # Implementera historik för en sensor.
+
+
     query = """
         SELECT id, device_id, temperature, humidity, battery, created_at
         FROM measurements

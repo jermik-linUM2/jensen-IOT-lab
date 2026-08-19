@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request, render_template
 import os
 import socket
+import logging
 
 from db import (
     device_exists,
@@ -14,6 +15,8 @@ from validation import validate_measurement
 from cache import get_latest_from_cache, set_latest_in_cache
 
 app = Flask(__name__)
+
+app.logger.setLevel(logging.INFO)
 
 APP_VERSION = os.getenv("APP_VERSION", "v1")
 POD_NAME = socket.gethostname()
@@ -45,17 +48,18 @@ def measurements():
 
 @app.get("/devices/<device_id>/latest")
 def latest(device_id):
-    # TODO M1:
-    # Läs senaste mätningen från PostgreSQL med get_latest_measurement(...).
-    # Returnera 404 om sensorn eller en mätning saknas.
-    #
-    # TODO M2:
-    # Utöka M1-lösningen med cache-aside:
-    # 1. Försök läsa från Redis.
-    # 2. Vid cache miss: läs från PostgreSQL.
-    # 3. Spara databasresultatet i Redis.
+
     if device_exists(device_id):
+        cached_data = get_latest_from_cache(device_id)
+        if cached_data is not None:
+            app.logger.info(f"CACHE HIT för {device_id}")
+            return jsonify(cached_data), 200
+        
+        app.logger.info(f"CACHE MISS för {device_id}")
         data = get_latest_measurement(device_id)
+        if not data:
+            return jsonify({"error": f"no measurement found for '{device_id}'"}), 404
+        set_latest_in_cache(device_id, data)
         return jsonify(data), 200
     
     else:
@@ -69,9 +73,7 @@ def latest(device_id):
 
 @app.get("/devices/<device_id>/measurements")
 def device_history(device_id):
-    # TODO M1:
-    # Hämta sensorhistorik från PostgreSQL.
-    # Känd sensor utan mätningar: 200 och []. Okänd sensor: 404.
+
     if device_exists(device_id):
         data = get_measurements_for_device(device_id)
         return jsonify(data), 200
@@ -94,16 +96,12 @@ def create_measurement():
         print(f"INVALID measurement from {data.get('deviceId', 'unknown')}: {errors}")
         return jsonify({"errors": errors}), 400
 
-    # TODO M2:
-    # Uppdatera latest-cache för sensorn.
-    #
-    # Under starter-fasen returneras 202 så att simulatorn kan köras
-    # även innan studenten implementerat persistensen.
     device_id = data.get("deviceId")
     if device_exists(device_id):
         rv = insert_measurement(data)
 
         if rv:
+            set_latest_in_cache(device_id, data)
             return jsonify({"message": "row succesfully inserted", "data": rv}), 201
         else:
             return jsonify({"error": "faild to insert row"}), 500
